@@ -1,0 +1,191 @@
+## 5 动态规划
+
+### 背包问题
+
+#### 0-1背包问题
+
+```C++
+#include <iostream>
+using namespace std;
+
+const int N = 1005;
+int volunm[N], value[N];
+int f_1[N][N]; 
+int f_2[N];
+//状态f[i][j]定义:前i个物品,背包容量j下的最优解(最大价值)
+//为什么是0-1背包问题,最后一个物品选or不选两种选择
+/*状态转移方程:
+1. 最后一个物品装不下: f[i][j] = f[i - 1][j]
+2. 最后一个物品能装下: f[i][j] = max(f[i - 1][j], f[i - 1][j - volunm[i]] + value[i])
+*/
+
+int main(){
+    int number, volunmTotal;
+    cin >> number >> volunmTotal;
+    for (int i = 1; i <= number; i ++) cin >> volunm[i] >> value[i];
+    //二维循环情况
+    for (int i = 1; i <= number; i ++){
+        for (int j = 1; j <= volunmTotal; j ++){
+            if (volunm[i] > j) f_1[i][j] = f_1[i - 1][j];
+            else f_1[i][j] = max(f_1[i - 1][j], f_1[i - 1][j - volunm[i]] + value[i]);
+        }
+    }
+    cout << f_1[number][volunmTotal] << endl;
+
+    //一维循环优化
+    for (int i = 1; i <= number; i ++){
+        for (int j = volunmTotal; j >= volunm[i]; j --){
+            f_2[j] = max(f_2[j], f_2[j - volunm[i]] + value[i]);
+        }
+    }
+    cout << f_2[volunmTotal] << endl;
+    return 0;
+}
+```
+
+#### 完全背包问题
+
+```C++
+#include <iostream>
+using namespace std;
+const int N = 1005;
+int volunm[N], value[N];
+// int f[N][N];
+// int f[N];
+
+int main(){
+    int number, volunmTotal;
+    cin >> number >> volunmTotal;
+    for (int i = 1; i <= number; i ++) cin >> volunm[i] >> value[i];
+    // TLE代码
+    for (int i = 1; i <= number; i ++)
+        for (int j = 1; j <= volunmTotal; j ++)
+            for (int k = 0; k * volunm[i] <= j; k ++)
+                f[i][j] = max(f[i][j], f[i - 1][j - k * volunm[i]] + k * value[i]);
+    
+    cout << f[number][volunmTotal] << endl;
+    
+    // 递推关系式：f[i][j] = max(f[i][j - v] + w , f[i - 1][j]) 
+    for (int i = 1; i <= number; i ++)
+        for (int j = 1; j <= volunmTotal; j ++){
+            if (volunm[i] > j) f[i][j] = f[i - 1][j]; //为什么这一步
+            else f[i][j] = max(f[i - 1][j], f[i][j - volunm[i]] + value[i]);
+        }
+    cout << f[number][volunmTotal] << endl;
+    
+    // 再优化的写法
+    for (int i = 1; i <= number; i ++)
+        for (int j = 1; j <= volunmTotal; j ++)
+            if (volunm[i] <= j) f[j] = max(f[j], f[j - volunm[i]] + value[i]);
+    cout << f[volunmTotal] << endl;
+    return 0;
+}
+```
+
+#### 多重背包问题
+
+* 暴力写法
+
+  ```c++
+  #include <iostream>
+  using namespace std;
+  const int N = 1005;
+  int volumn[N], value[N], num[N];
+  int f[N][N];
+  
+  int main(){
+      int number, volumnTotal;
+      cin >> number >> volumnTotal;
+      for (int i = 1; i <= number; i ++) cin >> volumn[i] >> value[i] >> num[i];
+      
+      for (int i = 1; i <= number; i ++)
+          for (int j = 1; j <= volumnTotal; j ++)
+              for (int k = 0; k <= num[i] && k * volumn[i] <= j; k ++)
+                  f[i][j] = max(f[i][j], f[i - 1][j - k * volumn[i]] + k * value[i]);
+      
+      cout << f[number][volumnTotal] << endl;
+      return 0;
+  }
+  ```
+
+* 二进制优化
+
+  ```C++
+  #include <iostream>
+  using namespace std;
+  const int N = 12010, M = 2010; //数据范围的确定
+  int volumnPack[N], valuePack[N]; //逐一枚举最大是N * logS
+  int f[M];
+  
+  int main(){
+      int num, volumnTotal;
+      cin >> num >> volumnTotal;
+      int count = 0;
+      while (num --){
+          int volumn, value, number;
+          cin >> volumn >> value >> number;
+          int k = 1; 
+          //对每一个物品，有n个，打包成n'组，每组里面物品的个数分别是2^0, 2^1...个
+          while (k <= number){
+              count ++;
+              volumnPack[count] = volumn * k;
+              valuePack[count] = value * k;
+              number -= k;
+              k *= 2; //倍增思想
+          }
+          if (number){
+              count ++;
+              volumnPack[count] = volumn * number;
+              valuePack[count] = value * number;
+          }
+      }
+  
+      // dp的开始，这里转化为01背包问题
+      for(int i = 1; i <= count; i ++)
+          for (int j = volumnTotal; j >= volumnPack[i]; j --)
+              f[j] = max(f[j], f[j - volumnPack[i]] + valuePack[i]);
+              
+      cout << f[volumnTotal] << endl;
+  }
+  ```
+
+
+#### 分组背包问题
+
+```C++
+/*
+f[i][j]:集合,表示从前i组里面选,体积不超过j的选法
+属性:最大值
+集合的划分: 第i组选或者不选,选第i组,选哪个物品(要求:体积不超, 价值取max)
+*/
+
+#include <iostream>
+using namespace std;
+const int N = 110;
+int group[N]; //组号
+int volumn[N][N], value[N][N];
+int f[N][N];
+
+int main(){
+    int groupNumber, volumnTotal;
+    cin >> groupNumber >> volumnTotal;
+    
+    for(int i = 1; i <= groupNumber; i ++){
+        cin >> group[i];
+        for (int j = 1; j <= group[i]; j ++)
+            cin >> volumn[i][j] >> value[i][j];
+    }
+    
+    for (int i = 1; i <= groupNumber; i ++)
+        for (int j = 1; j <= volumnTotal; j ++){
+            f[i][j] = f[i - 1][j];
+            for (int k = 1; k <= group[i]; k ++){
+                if (volumn[i][k] <= j)
+                    f[i][j] = max(f[i][j], f[i - 1][j - volumn[i][k]] + value[i][k]);
+            }
+        }
+    cout << f[groupNumber][volumnTotal] << endl;
+    return 0;
+}
+```
+
